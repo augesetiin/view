@@ -71,12 +71,11 @@ elif option == "View Files":
                         except Exception as e:
                             st.error(f"Could not read text file: {e}")
                     elif mime_type == 'application/pdf':
-                        # For PDF viewing, you can use an iframe if encoded to base64
-                        import base64
-                        with open(file_path, "rb") as f:
-                            base64_pdf = base64.b64encode(f.read()).decode('utf-8')
-                        pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="600" type="application/pdf"></iframe>'
-                        st.markdown(pdf_display, unsafe_allow_html=True)
+                        try:
+                            from streamlit_pdf_viewer import pdf_viewer
+                            pdf_viewer(file_path)
+                        except ImportError:
+                            st.error("Please add 'streamlit-pdf-viewer' to your requirements.txt or install it using pip.")
                     else:
                         st.warning("Preview not available for this file type. Please download to view.")
                 else:
