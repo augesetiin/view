@@ -56,34 +56,116 @@ elif option == "View Files":
             if view_button:
                 st.subheader(f"Preview: {file}")
                 mime_type, _ = mimetypes.guess_type(file_path)
-                
-                if mime_type:
-                    if mime_type.startswith('image'):
-                        st.image(file_path)
-                    elif mime_type.startswith('audio'):
-                        st.audio(file_path)
-                    elif mime_type.startswith('video'):
-                        st.video(file_path)
-                    elif mime_type.startswith('text') or file.endswith(('.py', '.md', '.csv', '.json')):
-                        try:
-                            with open(file_path, "r", encoding="utf-8") as f:
-                                st.text(f.read())
-                        except Exception as e:
-                            st.error(f"Could not read text file: {e}")
-                    elif mime_type == 'application/pdf':
-                        try:
-                            from streamlit_pdf_viewer import pdf_viewer
-                            pdf_viewer(file_path)
-                        except ImportError:
-                            st.error("Please add 'streamlit-pdf-viewer' to your requirements.txt or install it using pip.")
-                    else:
-                        st.warning("Preview not available for this file type. Please download to view.")
-                else:
-                    # Fallback for text if no mime type is found
+                _, ext = os.path.splitext(file)
+                ext = ext.lower()
+
+                # Map file extensions to language names for syntax highlighting
+                LANG_MAP = {
+                    '.py': 'python', '.js': 'javascript', '.ts': 'typescript',
+                    '.tsx': 'tsx', '.jsx': 'jsx', '.html': 'html', '.htm': 'html',
+                    '.css': 'css', '.json': 'json', '.xml': 'xml', '.yaml': 'yaml',
+                    '.yml': 'yaml', '.toml': 'toml', '.md': 'markdown',
+                    '.csv': 'csv', '.sql': 'sql', '.sh': 'bash', '.bat': 'batch',
+                    '.ps1': 'powershell', '.java': 'java', '.c': 'c', '.cpp': 'cpp',
+                    '.h': 'c', '.hpp': 'cpp', '.cs': 'csharp', '.go': 'go',
+                    '.rs': 'rust', '.rb': 'ruby', '.php': 'php', '.swift': 'swift',
+                    '.kt': 'kotlin', '.dart': 'dart', '.lua': 'lua', '.r': 'r',
+                    '.pl': 'perl', '.scala': 'scala', '.vue': 'html',
+                    '.svelte': 'html', '.ini': 'ini', '.cfg': 'ini',
+                    '.log': 'log', '.txt': 'text', '.env': 'bash',
+                    '.gitignore': 'text', '.dockerignore': 'text',
+                    '.dockerfile': 'dockerfile',
+                }
+
+                # Extensions that should be treated as readable text
+                TEXT_EXTENSIONS = set(LANG_MAP.keys())
+
+                # Check if file is a text-based file
+                is_text_file = (
+                    (mime_type and mime_type.startswith('text'))
+                    or ext in TEXT_EXTENSIONS
+                    or (mime_type and mime_type in (
+                        'application/json', 'application/xml',
+                        'application/javascript', 'application/x-yaml',
+                        'application/x-sh', 'application/x-python',
+                    ))
+                )
+
+                if mime_type and mime_type.startswith('image'):
+                    st.image(file_path)
+                elif mime_type and mime_type.startswith('audio'):
+                    st.audio(file_path)
+                elif mime_type and mime_type.startswith('video'):
+                    st.video(file_path)
+                elif mime_type and mime_type == 'application/pdf':
                     try:
-                        with open(file_path, "r", encoding="utf-8") as f:
-                            st.text(f.read())
-                    except:
+                        import base64
+                        with open(file_path, "rb") as f:
+                            base64_pdf = base64.b64encode(f.read()).decode('utf-8')
+                        
+                        pdf_display = f'''
+                        <iframe 
+                            src="data:application/pdf;base64,{base64_pdf}#view=FitH" 
+                            width="100%" 
+                            height="800" 
+                            type="application/pdf"
+                            style="border: 1px solid #ccc; border-radius: 5px;"
+                        ></iframe>
+                        '''
+                        st.markdown("### Preview (Native Browser Viewer)")
+                        st.caption("You can freely highlight and copy text directly from the document below.")
+                        st.markdown(pdf_display, unsafe_allow_html=True)
+                    except Exception as e:
+                        st.error(f"Could not load PDF: {e}")
+                elif is_text_file:
+                    try:
+                        with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+                            content = f.read()
+                        
+                        # Use raw HTML <pre> block for pure browser-native selection and copying
+                        html_content = f"""
+                        <div style="
+                            background-color: #1e1e1e;
+                            color: #d4d4d4;
+                            padding: 1rem;
+                            border-radius: 0.5rem;
+                            overflow-x: auto;
+                            max-height: 500px;
+                            overflow-y: auto;
+                            font-family: monospace;
+                            border: 1px solid #333;
+                            user-select: text;
+                        ">
+                            <pre style="margin: 0; white-space: pre-wrap; word-wrap: break-word;">{content.replace('<', '&lt;').replace('>', '&gt;')}</pre>
+                        </div>
+                        """
+                        st.markdown(html_content, unsafe_allow_html=True)
+                    except Exception as e:
+                        st.error(f"Could not read file: {e}")
+                else:
+                    # Try to read as text anyway before giving up
+                    try:
+                        with open(file_path, "r", encoding="utf-8", errors="strict") as f:
+                            content = f.read()
+                        
+                        html_content = f"""
+                        <div style="
+                            background-color: #1e1e1e;
+                            color: #d4d4d4;
+                            padding: 1rem;
+                            border-radius: 0.5rem;
+                            overflow-x: auto;
+                            max-height: 500px;
+                            overflow-y: auto;
+                            font-family: monospace;
+                            border: 1px solid #333;
+                            user-select: text;
+                        ">
+                            <pre style="margin: 0; white-space: pre-wrap; word-wrap: break-word;">{content.replace('<', '&lt;').replace('>', '&gt;')}</pre>
+                        </div>
+                        """
+                        st.markdown(html_content, unsafe_allow_html=True)
+                    except Exception:
                         st.warning("Preview not available for this file type. Please download to view.")
             
             st.divider()
