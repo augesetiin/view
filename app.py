@@ -99,22 +99,13 @@ elif option == "View Files":
                     st.video(file_path)
                 elif mime_type and mime_type == 'application/pdf':
                     try:
-                        import base64
-                        with open(file_path, "rb") as f:
-                            base64_pdf = base64.b64encode(f.read()).decode('utf-8')
-                        
-                        pdf_display = f'''
-                        <iframe 
-                            src="data:application/pdf;base64,{base64_pdf}#view=FitH" 
-                            width="100%" 
-                            height="800" 
-                            type="application/pdf"
-                            style="border: 1px solid #ccc; border-radius: 5px;"
-                        ></iframe>
-                        '''
-                        st.markdown("### Preview (Native Browser Viewer)")
+                        from streamlit_pdf_viewer import pdf_viewer
+                        st.markdown("### Preview")
                         st.caption("You can freely highlight and copy text directly from the document below.")
-                        st.markdown(pdf_display, unsafe_allow_html=True)
+                        # render_text=True enables the text selection layer over the PDF
+                        pdf_viewer(file_path, render_text=True)
+                    except ImportError:
+                        st.error("Please add 'streamlit-pdf-viewer' to your requirements.txt or install it using pip.")
                     except Exception as e:
                         st.error(f"Could not load PDF: {e}")
                 elif is_text_file:
